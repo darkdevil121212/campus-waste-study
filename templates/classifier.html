@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Waste Classifier — Campus Waste Study{% endblock %}
+{% block extra_head %}
+<style>
+  .clf-header {
+    text-align: center;
+    padding: 2.5rem 0 2rem;
+  }
+  .clf-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .clf-header p { color: var(--muted); }
+  .clf-box {
+    max-width: 580px;
+    margin: 0 auto;
+  }
+  .search-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    padding: 0.9rem 1.25rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .result-card {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.4s;
+    display: none;
+  }
+  .result-card.show { display: block; }
+  .result-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+  .result-category {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+  }
+  .result-tip {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .quick-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    justify-content: center;
+  }
+  .tag {
+    padding: 0.35rem 0.9rem;
+    border-radius: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tag:hover { border-color: var(--accent); color: var(--accent); }
+  .guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 2.5rem;
+  }
+  .guide-card {
+    border-radius: 14px;
+    padding: 1.25rem;
+    border: 1px solid;
+  }
+  .guide-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+  }
+  .guide-card ul {
+    list-style: none;
+    padding: 0;
+    font-size: 0.84rem;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+  .guide-card ul li::before { content: "→ "; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="clf-header">
+  <h1>🗑️ Waste Classifier</h1>
+  <p>Type any item to find out which bin it belongs to</p>
+</div>
+
+<div class="clf-box">
+  <div class="quick-tags">
+    <span class="tag" onclick="classify('banana')">🍌 banana</span>
+    <span class="tag" onclick="classify('battery')">🔋 battery</span>
+    <span class="tag" onclick="classify('paper')">📄 paper</span>
+    <span class="tag" onclick="classify('phone')">📱 phone</span>
+    <span class="tag" onclick="classify('plastic bottle')">🍶 bottle</span>
+    <span class="tag" onclick="classify('chemical')">⚗️ chemical</span>
+    <span class="tag" onclick="classify('laptop')">💻 laptop</span>
+    <span class="tag" onclick="classify('food')">🍱 food</span>
+  </div>
+
+  <div class="search-row">
+    <input type="text" class="search-input" id="item-input"
+      placeholder="Type an item (e.g. plastic bottle, battery, leaves...)"
+      onkeydown="if(event.key==='Enter') classify(this.value)">
+    <button class="btn btn-primary" onclick="classify(document.getElementById('item-input').value)">
+      Classify →
+    </button>
+  </div>
+
+  <div class="result-card" id="result-card">
+    <div class="result-icon" id="result-icon">♻️</div>
+    <div class="result-category" id="result-category">—</div>
+    <div class="result-tip" id="result-tip">—</div>
+  </div>
+</div>
+
+<div class="guide-grid">
+  <div class="guide-card" style="background:rgba(34,197,94,0.08);border-color:#22c55e;">
+    <h3 style="color:#22c55e;">🟢 Wet / Organic</h3>
+    <ul>
+      <li>Food scraps</li>
+      <li>Fruit & vegetable peels</li>
+      <li>Tea leaves, eggshells</li>
+      <li>Fallen leaves, garden waste</li>
+    </ul>
+  </div>
+  <div class="guide-card" style="background:rgba(59,130,246,0.08);border-color:#3b82f6;">
+    <h3 style="color:#3b82f6;">🔵 Dry / Recyclable</h3>
+    <ul>
+      <li>Paper, cardboard</li>
+      <li>Plastic bottles (clean)</li>
+      <li>Glass bottles, metal cans</li>
+      <li>Old newspapers, magazines</li>
+    </ul>
+  </div>
+  <div class="guide-card" style="background:rgba(239,68,68,0.08);border-color:#ef4444;">
+    <h3 style="color:#ef4444;">🔴 Hazardous</h3>
+    <ul>
+      <li>Batteries, paint cans</li>
+      <li>Expired medicines</li>
+      <li>Lab chemicals</li>
+      <li>CFL bulbs, syringes</li>
+    </ul>
+  </div>
+  <div class="guide-card" style="background:rgba(168,85,247,0.08);border-color:#a855f7;">
+    <h3 style="color:#a855f7;">🟣 E-Waste</h3>
+    <ul>
+      <li>Old phones, laptops</li>
+      <li>Chargers, cables</li>
+      <li>Keyboards, mice</li>
+      <li>Any electronic device</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const icons = {
+  "Wet / Organic": "🟢",
+  "Dry / Recyclable": "🔵",
+  "Hazardous": "🔴",
+  "E-Waste": "🟣",
+  "Unknown": "❓"
+};
+
+function classify(item) {
+  if (!item.trim()) return;
+  document.getElementById('item-input').value = item;
+  fetch('/api/classify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item })
+  }).then(r => r.json()).then(d => {
+    const card = document.getElementById('result-card');
+    card.classList.add('show');
+    card.style.borderColor = d.color;
+    document.getElementById('result-icon').textContent = icons[d.category] || '♻️';
+    document.getElementById('result-category').textContent = d.category;
+    document.getElementById('result-category').style.color = d.color;
+    document.getElementById('result-tip').textContent = d.tip;
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Campus Waste Study{% endblock %}
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  .dash-header {
+    padding: 2.5rem 0 2rem;
+  }
+  .dash-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 0.3rem;
+  }
+  .dash-header p { color: var(--muted); }
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .sum-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  .sum-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .sum-label { color: var(--muted); font-size: 0.82rem; margin-top: 0.2rem; }
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+  .no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    text-align: center;
+    gap: 1rem;
+  }
+  .no-data .icon { font-size: 3rem; }
+  .no-data h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; color: #fff; }
+  .no-data p { color: var(--muted); max-width: 380px; }
+  .refresh-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    float: right;
+    margin-top: -0.25rem;
+    transition: all 0.2s;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="dash-header">
+  <h1>📊 Analytics Dashboard</h1>
+  <p>Live overview of all survey responses &mdash; auto-refreshes every 30s</p>
+</div>
+
+<div id="no-data" class="no-data" style="display:none">
+  <div class="icon">📭</div>
+  <h2>No data yet</h2>
+  <p>Be the first to fill out the survey! Dashboard charts will appear as responses come in.</p>
+  <a href="/survey" class="btn btn-primary">Take the Survey</a>
+</div>
+
+<div id="dash-content">
+  <div class="summary-row">
+    <div class="sum-card"><div class="sum-num" id="d-total">—</div><div class="sum-label">Total Responses</div></div>
+    <div class="sum-card"><div class="sum-num" id="d-awareness">—</div><div class="sum-label">Avg Awareness</div></div>
+    <div class="sum-card"><div class="sum-num" id="d-top-seg">—</div><div class="sum-label">Most Common Behavior</div></div>
+    <div class="sum-card"><div class="sum-num" id="d-top-barrier">—</div><div class="sum-label">Top Barrier</div></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Waste Segregation Behavior <button class="refresh-btn" onclick="loadDash()">↻ Refresh</button></div>
+      <canvas id="chart-seg" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Segregation Frequency</div>
+      <canvas id="chart-freq" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top Barriers to Segregation</div>
+      <canvas id="chart-barriers" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Responses by Department</div>
+      <canvas id="chart-dept" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Bin Availability on Campus</div>
+      <canvas id="chart-bins" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Responses by Year of Study</div>
+      <canvas id="chart-year" height="220"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const DARK_BG = '#1c2b3a';
+const GRID = 'rgba(255,255,255,0.06)';
+const TEXT = '#8aab93';
+const PALETTE = ['#2fe89a','#3b82f6','#f59e0b','#ef4444','#a855f7','#ec4899','#14b8a6','#f97316'];
+
+Chart.defaults.color = TEXT;
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+const charts = {};
+
+function mkChart(id, type, labels, data, colors) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, {
+    type,
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors || PALETTE,
+        borderColor: DARK_BG,
+        borderWidth: type === 'pie' || type === 'doughnut' ? 3 : 0,
+        borderRadius: type === 'bar' ? 6 : 0,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: type==='bar' ? 'none' : 'bottom', labels: { padding: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } }
+      },
+      scales: type === 'bar' ? {
+        x: { grid: { color: GRID }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: GRID }, ticks: { font: { size: 11 }, stepSize: 1 }, beginAtZero: true }
+      } : {}
+    }
+  });
+}
+
+function topKey(obj) {
+  if(!obj || !Object.keys(obj).length) return '—';
+  return Object.entries(obj).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+function loadDash() {
+  fetch('/api/stats').then(r=>r.json()).then(d => {
+    if (!d.total) {
+      document.getElementById('no-data').style.display = 'flex';
+      document.getElementById('dash-content').style.display = 'none';
+      return;
+    }
+    document.getElementById('no-data').style.display = 'none';
+    document.getElementById('dash-content').style.display = 'block';
+
+    document.getElementById('d-total').textContent = d.total;
+    document.getElementById('d-awareness').textContent = d.avg_awareness + '/10';
+    document.getElementById('d-top-seg').textContent = topKey(d.segregation);
+    document.getElementById('d-top-barrier').textContent = (topKey(d.barriers)||'—').split('/')[0];
+
+    const kv = obj => [Object.keys(obj), Object.values(obj)];
+
+    let [sl, sv] = kv(d.segregation||{});
+    mkChart('chart-seg', 'doughnut', sl, sv);
+
+    let [fl, fv] = kv(d.frequency||{});
+    mkChart('chart-freq', 'bar', fl, fv, fl.map((_,i)=>PALETTE[i%PALETTE.length]));
+
+    let barItems = Object.entries(d.barriers||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    mkChart('chart-barriers', 'bar', barItems.map(e=>e[0].substring(0,22)), barItems.map(e=>e[1]),
+      barItems.map((_,i)=>PALETTE[i%PALETTE.length]));
+
+    let deptItems = Object.entries(d.departments||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    mkChart('chart-dept', 'bar', deptItems.map(e=>e[0].substring(0,18)), deptItems.map(e=>e[1]),
+      deptItems.map((_,i)=>PALETTE[i%PALETTE.length]));
+
+    let [bl, bv] = kv(d.bin_availability||{});
+    mkChart('chart-bins', 'pie', bl, bv);
+
+    let [yl, yv] = kv(d.year||{});
+    mkChart('chart-year', 'doughnut', yl, yv);
+  });
+}
+
+loadDash();
+setInterval(loadDash, 30000);
+</script>
+{% endblock %}
