@@ -27,9 +27,37 @@ def init_db():
             barriers TEXT,
             awareness_score INTEGER,
             bin_availability TEXT,
-            suggestions TEXT
+            suggestions TEXT,
+            food_waste_disposal TEXT,
+            reusable_container_use TEXT,
+            plastic_separation_confidence TEXT,
+            recycling_education_rating TEXT,
+            waste_stream_improvement TEXT,
+            participated_collections TEXT,
+            peer_encouragement TEXT,
+            main_nonsegregation_reason TEXT,
+            e_waste_disposal_knowledge TEXT,
+            visible_bin_rating INTEGER
         )
     ''')
+
+    existing_cols = [row[1] for row in conn.execute("PRAGMA table_info(responses)")]
+    extra_columns = [
+        ("food_waste_disposal", "TEXT"),
+        ("reusable_container_use", "TEXT"),
+        ("plastic_separation_confidence", "TEXT"),
+        ("recycling_education_rating", "TEXT"),
+        ("waste_stream_improvement", "TEXT"),
+        ("participated_collections", "TEXT"),
+        ("peer_encouragement", "TEXT"),
+        ("main_nonsegregation_reason", "TEXT"),
+        ("e_waste_disposal_knowledge", "TEXT"),
+        ("visible_bin_rating", "INTEGER")
+    ]
+    for col_name, col_type in extra_columns:
+        if col_name not in existing_cols:
+            conn.execute(f"ALTER TABLE responses ADD COLUMN {col_name} {col_type}")
+
     conn.commit()
     conn.close()
 
@@ -48,8 +76,13 @@ def submit():
         INSERT INTO responses (
             timestamp, department, year, segregates_waste, frequency,
             wet_dry_knowledge, common_mistakes, barriers,
-            awareness_score, bin_availability, suggestions
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            awareness_score, bin_availability, suggestions,
+            food_waste_disposal, reusable_container_use,
+            plastic_separation_confidence, recycling_education_rating,
+            waste_stream_improvement, participated_collections,
+            peer_encouragement, main_nonsegregation_reason,
+            e_waste_disposal_knowledge, visible_bin_rating
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         datetime.now().isoformat(),
         request.form.get("department"),
@@ -61,7 +94,17 @@ def submit():
         ", ".join(request.form.getlist("barriers")),
         int(request.form.get("awareness_score", 5)),
         request.form.get("bin_availability"),
-        request.form.get("suggestions", "")
+        request.form.get("suggestions", ""),
+        request.form.get("food_waste_disposal"),
+        request.form.get("reusable_container_use"),
+        request.form.get("plastic_separation_confidence"),
+        request.form.get("recycling_education_rating"),
+        request.form.get("waste_stream_improvement"),
+        request.form.get("participated_collections"),
+        request.form.get("peer_encouragement"),
+        request.form.get("main_nonsegregation_reason"),
+        request.form.get("e_waste_disposal_knowledge"),
+        int(request.form.get("visible_bin_rating", 5))
     ))
     conn.commit()
     conn.close()

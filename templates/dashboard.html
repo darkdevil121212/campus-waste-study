@@ -26,14 +26,36 @@
     border-radius: 14px;
     padding: 1.25rem;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 120px;
   }
   .sum-num {
     font-family: 'Syne', sans-serif;
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
     font-weight: 800;
     color: var(--accent);
+    line-height: 1.1;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
-  .sum-label { color: var(--muted); font-size: 0.82rem; margin-top: 0.2rem; }
+  .sum-text {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1rem, 1.75vw, 1.35rem);
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.15;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .sum-label {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin-top: 0.2rem;
+  }
   .charts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -97,7 +119,7 @@
     <div class="sum-card"><div class="sum-num" id="d-total">—</div><div class="sum-label">Total Responses</div></div>
     <div class="sum-card"><div class="sum-num" id="d-awareness">—</div><div class="sum-label">Avg Awareness</div></div>
     <div class="sum-card"><div class="sum-num" id="d-top-seg">—</div><div class="sum-label">Most Common Behavior</div></div>
-    <div class="sum-card"><div class="sum-num" id="d-top-barrier">—</div><div class="sum-label">Top Barrier</div></div>
+    <div class="sum-card"><div class="sum-text" id="d-top-barrier">—</div><div class="sum-label">Top Barrier</div></div>
   </div>
 
   <div class="charts-grid">
@@ -187,7 +209,7 @@ function loadDash() {
     document.getElementById('d-total').textContent = d.total;
     document.getElementById('d-awareness').textContent = d.avg_awareness + '/10';
     document.getElementById('d-top-seg').textContent = topKey(d.segregation);
-    document.getElementById('d-top-barrier').textContent = (topKey(d.barriers)||'—').split('/')[0];
+    document.getElementById('d-top-barrier').textContent = topKey(d.barriers) || '—';
 
     const kv = obj => [Object.keys(obj), Object.values(obj)];
 
